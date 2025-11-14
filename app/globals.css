@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: oklch(0.565 0.213 262.4);
+  --primary-foreground: oklch(0.985 0 0);
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.12 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0.05 262.4);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.03 0);
+  --muted-foreground: oklch(0.65 0.02 0);
+  --accent: oklch(0.565 0.213 262.4);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.2 0.02 0);
+  --input: oklch(0.15 0.01 0);
+  --ring: oklch(0.565 0.213 262.4);
+  --destructive: oklch(0.548 0.238 19.326);
+  --destructive-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.565 0.213 262.4);
+  --chart-2: oklch(0.448 0.194 280);
+  --chart-3: oklch(0.628 0.195 73.8);
+  --chart-4: oklch(0.681 0.154 304);
+  --chart-5: oklch(0.72 0.148 150);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --primary: oklch(0.565 0.213 262.4);
+  --primary-foreground: oklch(0.985 0 0);
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.12 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0.05 262.4);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.03 0);
+  --muted-foreground: oklch(0.65 0.02 0);
+  --accent: oklch(0.565 0.213 262.4);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.2 0.02 0);
+  --input: oklch(0.15 0.01 0);
+  --ring: oklch(0.565 0.213 262.4);
+  --destructive: oklch(0.548 0.238 19.326);
+  --destructive-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.12 0 0);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.565 0.213 262.4);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.25 0.03 0);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.2 0.02 0);
+  --sidebar-ring: oklch(0.565 0.213 262.4);
+}
+
+:root {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-family: 'Geist', 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+}
+
+.bg-background {
+  background-color: var(--background);
+}
+
+.bg-card {
+  background-color: var(--card);
+}
+
+.text-card-foreground {
+  color: var(--card-foreground);
+}
+
+.bg-popover {
+  background-color: var(--popover);
+}
+
+.text-popover-foreground {
+  color: var(--popover-foreground);
+}
+
+.bg-input {
+  background-color: var(--input);
+}
+
+.text-muted-foreground {
+  color: var(--muted-foreground);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.text-accent-foreground {
+  color: var(--accent-foreground);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.border-border {
+  border-color: var(--border);
+}
+
+.ring-ring {
+  border-color: var(--ring);
+}
+
+.text-destructive {
+  color: var(--destructive);
+}
+
+.bg-destructive {
+  background-color: var(--destructive);
+}
+
+.border-destructive {
+  border-color: var(--destructive);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-none;
+  }
+}
