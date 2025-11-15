@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card'
-import { MessageCircle, FileText, ImageIcon, Download } from 'lucide-react'
+import { MessageCircle, FileText, ImageIcon, Download, Terminal } from 'lucide-react'
 
 interface FileAttachment {
   name: string
@@ -13,6 +13,7 @@ interface ChatMessageProps {
   role: 'user' | 'assistant'
   isLoading?: boolean
   files?: FileAttachment[]
+  mode?: 'ai' | 'terminal'
 }
 
 export default function ChatMessage({
@@ -20,8 +21,10 @@ export default function ChatMessage({
   role,
   isLoading,
   files,
+  mode = 'ai',
 }: ChatMessageProps) {
   const isUser = role === 'user'
+  const isTerminal = mode === 'terminal'
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
@@ -37,24 +40,44 @@ export default function ChatMessage({
     return null
   }
 
+  const assistantAvatar = isTerminal ? (
+    <Terminal className="w-5 h-5 text-primary" />
+  ) : (
+    <MessageCircle className="w-5 h-5 text-primary" />
+  )
+
+  const baseCardClasses = isTerminal
+    ? 'bg-black text-green-400 border border-primary/30 rounded-2xl rounded-tl-sm font-mono text-sm shadow-inner'
+    : 'bg-card border border-border rounded-2xl rounded-tl-sm'
+
+  const userCardClasses = isTerminal
+    ? 'bg-black text-green-400 border border-primary/30 rounded-2xl rounded-tr-sm font-mono text-sm'
+    : 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm'
+
+  const textClasses = isTerminal
+    ? 'whitespace-pre-wrap break-words text-green-400'
+    : isUser
+    ? 'text-primary-foreground'
+    : 'text-foreground'
+
   return (
     <div className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <MessageCircle className="w-5 h-5 text-primary" />
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isTerminal ? 'bg-black/40 border border-primary/30' : 'bg-primary/10'
+          }`}
+        >
+          {assistantAvatar}
         </div>
       )}
 
       <Card
         className={`max-w-2xl px-4 py-3 ${
-          isUser
-            ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm'
-            : 'bg-card border border-border rounded-2xl rounded-tl-sm'
+          isUser ? userCardClasses : baseCardClasses
         } ${isLoading ? 'animate-pulse' : ''}`}
       >
-        <p className={`${isUser ? 'text-primary-foreground' : 'text-foreground'} mb-2`}>
-          {message}
-        </p>
+        <p className={`${textClasses} mb-2`}>{message}</p>
 
         {files && files.length > 0 && (
           <div className="flex flex-col gap-2 mt-3 border-t border-current/20 pt-3">
@@ -91,8 +114,14 @@ export default function ChatMessage({
       </Card>
 
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-primary-foreground">
-          U
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isTerminal
+              ? 'bg-black text-green-400 border border-primary/30'
+              : 'bg-primary text-primary-foreground'
+          }`}
+        >
+          {isTerminal ? '>' : 'U'}
         </div>
       )}
     </div>

@@ -26,7 +26,8 @@ const config: Config = {
         "destructive-foreground": "var(--destructive-foreground)",
       },
       fontFamily: {
-        sans: ["Geist", "Inter", "ui-sans-serif", "system-ui"],
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "SFMono-Regular", "monospace"],
       },
     },
   },

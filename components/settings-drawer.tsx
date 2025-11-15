@@ -4,6 +4,8 @@ import { X, Moon, Sun, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
+import { DEFAULT_OLLAMA_ENDPOINT } from '@/lib/ollama'
+import { useTheme } from 'next-themes'
 
 interface LocalApp {
   id: string
@@ -21,8 +23,9 @@ export default function SettingsDrawer({
   isOpen,
   onClose,
 }: SettingsDrawerProps) {
-  const [isDark, setIsDark] = useState(false)
-  const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/api/generate')
+  const { theme, resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [localEndpoint, setLocalEndpoint] = useState(DEFAULT_OLLAMA_ENDPOINT)
   const [temperature, setTemperature] = useState(0.7)
   const [localApps, setLocalApps] = useState<LocalApp[]>([])
   const [newAppName, setNewAppName] = useState('')
@@ -30,9 +33,10 @@ export default function SettingsDrawer({
   const [newAppDescription, setNewAppDescription] = useState('')
 
   useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark')
-    setIsDark(isDarkMode)
-    
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     const savedEndpoint = localStorage.getItem('localEndpoint')
     const savedTemp = localStorage.getItem('temperature')
     const savedApps = localStorage.getItem('localApps')
@@ -41,17 +45,18 @@ export default function SettingsDrawer({
     if (savedApps) setLocalApps(JSON.parse(savedApps))
   }, [])
 
+  const currentTheme = theme === 'system' ? resolvedTheme : theme
+  const isDark = mounted ? currentTheme === 'dark' : false
+
   const handleThemeToggle = () => {
-    const html = document.documentElement
-    html.classList.toggle('dark')
-    setIsDark(!isDark)
-    localStorage.setItem('theme', isDark ? 'light' : 'dark')
+    setTheme(isDark ? 'light' : 'dark')
   }
 
   const handleEndpointChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newEndpoint = e.target.value
     setLocalEndpoint(newEndpoint)
     localStorage.setItem('localEndpoint', newEndpoint)
+    window.dispatchEvent(new Event('local-endpoint-changed'))
   }
 
   const handleTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,6 +272,18 @@ export default function SettingsDrawer({
                 <li>Add local apps with their API endpoints</li>
                 <li>Kira can send/receive data from them</li>
                 <li>Use commands like: @appname action data</li>
+              </ol>
+            </Card>
+
+            <Card className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+              <p className="text-xs text-muted-foreground font-medium mb-2">
+                Termux + Termux:API setup:
+              </p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Install Termux (from F-Droid/GitHub) and open it once</li>
+                <li>Run <code className="bg-input px-1 rounded">pkg update && pkg upgrade</code></li>
+                <li>Install APIs: <code className="bg-input px-1 rounded">pkg install termux-api</code> and install the Termux:API add-on app</li>
+                <li>Expose your script via HTTP or webhook, then register the endpoint above so Kira can call it</li>
               </ol>
             </Card>
           </div>

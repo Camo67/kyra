@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
-
-const geist = Geist({ subsets: ['latin'] })
-const geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Kira - AI Chat Assistant',
@@ -36,8 +34,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="h-full bg-background text-foreground">
-      <body className={`${geist.className} ${geistMono.className} min-h-screen font-sans antialiased`}>
+    <html
+      lang="en"
+      className={`h-full bg-background text-foreground ${GeistSans.variable} ${GeistMono.variable}`}
+    >
+      <body className="min-h-screen font-sans antialiased">
         <ThemeProvider attribute="class" enableSystem defaultTheme="system">
           {children}
         </ThemeProvider>
