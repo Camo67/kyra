@@ -8,6 +8,7 @@ import ChatMessage from '@/components/chat-message'
 import ChatInput from '@/components/chat-input'
 import ModelSelector from '@/components/model-selector'
 import SettingsDrawer from '@/components/settings-drawer'
+import TermuxGuide from '@/components/termux-guide'
 
 const terminalQuickActions = [
   { label: 'Show directory', command: 'pwd' },
@@ -301,6 +302,7 @@ export default function Home() {
                 onModelChange={setSelectedModel}
               />
             )}
+            <TermuxGuide />
           </div>
         </div>
 

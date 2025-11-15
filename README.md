@@ -169,6 +169,119 @@ Treat Perplexity like every other provider in your API Key Manager so Codex/back
 6. **Safety reminder**
    Store only schemas/templates in Git; actual keys stay in `.env`, Termux exports, secret managers, or deployment-time env vars.
 
+### Grok (xAI) integration
+Add Grok to the same key manager pattern so agents can hit Grok chat endpoints:
+
+1. **Schema entry**
+   ```yaml
+   required_api_keys:
+     - service: "Grok API"
+       provider: "xAI"
+       type: "API_KEY"
+       env_var: "GROK_API_KEY"
+       description: "Access token for Grok chat/completions"
+       environments: ["Desktop", "Mobile", "Cloud"]
+   ```
+2. **Example key**
+   `.env.example` lists a placeholder under `GROK_API_KEY`. Replace it with your actual xAI token inside `.env.local`/Termux exports.
+3. **Usage snippet**
+   ```python
+   import os, requests
+
+   GROK_API_KEY = os.getenv("GROK_API_KEY")
+
+   def ask_grok(messages):
+       resp = requests.post(
+           "https://api.x.ai/v1/chat/completions",
+           headers={"Authorization": f"Bearer {GROK_API_KEY}", "Content-Type": "application/json"},
+           json={"model": "grok-beta", "messages": messages},
+           timeout=60,
+       )
+       resp.raise_for_status()
+       return resp.json()
+   ```
+4. **Connectivity test**
+   ```bash
+   curl https://api.x.ai/v1/chat/completions \
+     -H "Authorization: Bearer $GROK_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"model":"grok-beta","messages":[{"role":"user","content":"ping"}]}'
+   ```
+
+### Hugging Face Inference integration
+1. **Schema entry**
+   ```yaml
+   required_api_keys:
+     - service: "Hugging Face Inference"
+       provider: "Hugging Face"
+       type: "API_KEY"
+       env_var: "HUGGINGFACE_API_KEY"
+       description: "Direct calls to Inference Endpoints / text-generation"
+       environments: ["Desktop", "Mobile", "Cloud"]
+   ```
+2. **Model + key**
+   `.env.example` now includes `HUGGINGFACE_MODEL_ID=meta-llama/Meta-Llama-3.1-8B-Instruct` plus a placeholder `HUGGINGFACE_API_KEY`. Overwrite the placeholder with your actual HF token locally.
+3. **Usage snippet**
+   ```python
+   import os, requests
+
+   HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+   HF_MODEL = os.getenv("HUGGINGFACE_MODEL_ID", "meta-llama/Meta-Llama-3.1-8B-Instruct")
+
+   def ask_hf(prompt: str):
+       resp = requests.post(
+           f"https://api-inference.huggingface.co/models/{HF_MODEL}",
+           headers={"Authorization": f"Bearer {HF_API_KEY}"},
+           json={"inputs": prompt},
+           timeout=60,
+       )
+       resp.raise_for_status()
+       return resp.json()
+   ```
+4. **Connectivity test**
+   ```bash
+   curl https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3.1-8B-Instruct \
+     -H "Authorization: Bearer $HUGGINGFACE_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"inputs":"Hello"}'
+   ```
+
+### Google AI Studio (Gemini) integration
+1. **Schema entry**
+   ```yaml
+   required_api_keys:
+     - service: "Google AI Studio"
+       provider: "Google"
+       type: "API_KEY"
+       env_var: "GOOGLE_API_KEY"
+       description: "Gemini/NotebookLM access from AutoGen + Termux"
+       environments: ["Desktop", "Mobile", "Cloud"]
+   ```
+2. **Key storage**
+   `.env.example` contains a placeholder `GOOGLE_API_KEY`. Replace it with your Google AI Studio key inside `.env.local`/Termux exports.
+3. **Usage snippet**
+   ```python
+   import os, requests
+
+   GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+   def ask_gemini(prompt: str):
+       resp = requests.post(
+           "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+           params={"key": GOOGLE_API_KEY},
+           json={"contents": [{"parts": [{"text": prompt}]}]},
+           timeout=60,
+       )
+       resp.raise_for_status()
+       return resp.json()
+   ```
+4. **Connectivity test**
+   ```bash
+   curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$GOOGLE_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'
+   ```
+
 ## Git workflow (repo + remote)
 1. **Initialize & track**: If this folder is fresh, run `git init`, then `git add -A` to stage everything and `git commit -m "chore: bootstrap project"`.
 2. **Create remote**: Make an empty repo on GitHub/GitLab, copy its SSH/HTTPS URL, and link it with `git remote add origin <URL>`.
@@ -182,3 +295,14 @@ Treat Perplexity like every other provider in your API Key Manager so Codex/back
 4. **Config files**: The repo exposes `lib/firebase/client.ts` for browser usage and `lib/firebase/admin.ts` for server-side code (API routes, RSC). Import these helpers wherever you interact with Firestore/Auth/Storage.
 5. **Deployment**: Build with `npm run build`, then `firebase deploy --only hosting` (or integrate with Cloud Run/Functions depending on your architecture).
 6. **Termux tip**: Install Firebase CLI via `npm`, authenticate once, and run deployments from tmux sessions just like the rest of the stack.
+
+### Firebase project metadata
+- **Project name**: `kira`
+- **Project ID**: `kira-d74fa`
+- **Project number**: `508668209646`
+- **Environment type**: `Unspecified` (customize later per stage if needed)
+
+### Android / Termux in-app guide
+- The main workspace header now includes a **Termux Guide** button (see `app/page.tsx`). Tapping it on Android brings up a modal with every required Termux command grouped by stage (updates, Python deps, Ollama, ngrok/tmux, env exports).
+- Each command block has a copy icon, so you can paste directly into Termux without retyping on mobile.
+- The guide mirrors the sections above, ensuring offline local models plus remote tunnels can be configured entirely from an Android device.
