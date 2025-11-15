@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { DEFAULT_OLLAMA_ENDPOINT } from '@/lib/ollama'
 import { useTheme } from 'next-themes'
+import CredentialsForm from '@/components/credentials-form'
 
 interface LocalApp {
   id: string
@@ -250,6 +251,18 @@ export default function SettingsDrawer({
                     Add App
                   </Button>
                 </div>
+              </Card>
+
+              <Card className="p-4 bg-card/50 border-border">
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    API key vault
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Stored per Google account and encrypted with your ENCRYPTION_SECRET.
+                  </p>
+                </div>
+                <CredentialsForm />
               </Card>
             </div>
 

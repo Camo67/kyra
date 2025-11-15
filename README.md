@@ -306,3 +306,19 @@ Add Grok to the same key manager pattern so agents can hit Grok chat endpoints:
 - The main workspace header now includes a **Termux Guide** button (see `app/page.tsx`). Tapping it on Android brings up a modal with every required Termux command grouped by stage (updates, Python deps, Ollama, ngrok/tmux, env exports).
 - Each command block has a copy icon, so you can paste directly into Termux without retyping on mobile.
 - The guide mirrors the sections above, ensuring offline local models plus remote tunnels can be configured entirely from an Android device.
+- **Install Termux**: Grab the official APK from F-Droid (`https://f-droid.org/packages/com.termux/`), install it on your Android device, open the shell, and run the guide commands there (the Play Store build is outdated and may not support `pkg upgrade`).
+
+## Google OAuth + credential vault
+1. **Backend stack**: The app now ships with Prisma (SQLite) and NextAuth Google login. Configure `.env.local` with:
+   - `DATABASE_URL="file:./prisma/dev.db"`
+   - `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+   - `ENCRYPTION_SECRET` (32+ chars, used to encrypt keys at rest)
+2. **Run migrations**: `npm run prisma:generate && npm run prisma:migrate` to materialize the Prisma schema (`prisma/schema.prisma`). The repo includes the initial migration under `prisma/migrations/0001_init`.
+3. **Sign in**: Visit `/auth/signin` (or open the root page) and click “Continue with Google”. Every session gets a dedicated row in `User` plus an encrypted `UserCredential` record.
+4. **Manage keys**: Open the Settings drawer → “API key vault”. Paste Gemini, Hugging Face, Groq, and Notion tokens. They’re encrypted via `ENCRYPTION_SECRET` before landing in the database.
+5. **Chat routing**: `/api/chat` now checks which model you selected.
+   - `gemini-pro` → Google AI Studio via your saved key (falls back to `GOOGLE_API_KEY` env if set).
+   - `hf-meta-llama-3.1-8b` → Hugging Face Inference.
+   - `groq-llama3-8b` → Groq’s OpenAI-compatible endpoint.
+   - Any other model → local Ollama endpoint (`localEndpoint` setting).
+   The per-user credentials are injected automatically, so multi-user sessions never share secrets.

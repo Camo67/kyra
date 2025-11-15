@@ -24,10 +24,19 @@ interface ModelOption {
 }
 
 const defaultModels: ModelOption[] = [
-  { id: 'gpt-4o', name: 'GPT-4o', badge: 'Cloud', isLocal: false },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', badge: 'Cloud', isLocal: false },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', badge: 'Cloud', isLocal: false },
-  { id: 'claude-3-opus', name: 'Claude 3 Opus', badge: 'Cloud', isLocal: false },
+  { id: 'gemini-pro', name: 'Gemini Pro', badge: 'Google', isLocal: false },
+  {
+    id: 'hf-meta-llama-3.1-8b',
+    name: 'Meta Llama 3.1 8B (HF)',
+    badge: 'Hugging Face',
+    isLocal: false,
+  },
+  {
+    id: 'groq-llama3-8b',
+    name: 'Groq Llama3 8B',
+    badge: 'Groq',
+    isLocal: false,
+  },
 ]
 
 export default function ModelSelector({

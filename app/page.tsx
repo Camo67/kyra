@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, Settings, Plus, Send, Zap, Terminal } from 'lucide-react'
+import { MessageCircle, Settings, Plus, Zap, Terminal, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ChatMessage from '@/components/chat-message'
@@ -9,6 +9,7 @@ import ChatInput from '@/components/chat-input'
 import ModelSelector from '@/components/model-selector'
 import SettingsDrawer from '@/components/settings-drawer'
 import TermuxGuide from '@/components/termux-guide'
+import { useSession, signIn, signOut } from 'next-auth/react'
 
 const terminalQuickActions = [
   { label: 'Show directory', command: 'pwd' },
@@ -38,11 +39,12 @@ interface Message {
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
-  const [selectedModel, setSelectedModel] = useState('gpt-4o')
+  const [selectedModel, setSelectedModel] = useState('gemini-pro')
   const [isLoading, setIsLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [interactionMode, setInteractionMode] = useState<'ai' | 'terminal'>('ai')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { data: session, status } = useSession()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -229,6 +231,33 @@ export default function Home() {
     setMessages([])
   }
 
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
+        Connecting to your workspace...
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full border border-border rounded-2xl bg-card p-8 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+            <Zap className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-semibold text-foreground">Welcome to Kira</h1>
+          <p className="text-sm text-muted-foreground">
+            Sign in with Google to unlock your personalized agents, API key vault, and Termux-ready workflows.
+          </p>
+          <Button onClick={() => signIn('google')} className="w-full">
+            Continue with Google
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
@@ -303,6 +332,18 @@ export default function Home() {
               />
             )}
             <TermuxGuide />
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-muted-foreground">
+              <span>{session.user?.email}</span>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label="Sign out"
+                onClick={() => signOut({ callbackUrl: '/' })}
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
