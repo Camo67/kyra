@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Send, Paperclip, X } from 'lucide-react'
+import { Send, Paperclip, X, Mic, Square } from 'lucide-react'
+import { useVoiceInput } from '@/hooks/use-speech'
 
 interface ChatInputProps {
   onSend: (message: string, files?: File[]) => void
@@ -19,9 +20,25 @@ export default function ChatInput({
   const [files, setFiles] = useState<File[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInput((prev) => {
+      if (!prev) return text
+      return `${prev.trim()} ${text}`.trim()
+    })
+  }, [])
+  const {
+    isSupported: isVoiceSupported,
+    isListening,
+    error: voiceError,
+    startListening,
+    stopListening,
+  } = useVoiceInput(handleVoiceTranscript)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isListening) {
+      stopListening()
+    }
     if (input.trim() || files.length > 0) {
       onSend(input, files.length > 0 ? files : undefined)
       setInput('')
@@ -119,6 +136,40 @@ export default function ChatInput({
         >
           <Send className="w-4 h-4" />
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (isListening) {
+              stopListening()
+            } else {
+              startListening()
+            }
+          }}
+          disabled={!isVoiceSupported || isLoading}
+          className={`text-muted-foreground hover:text-foreground ${
+            isListening ? 'text-primary' : ''
+          }`}
+          aria-pressed={isListening}
+          title={
+            isVoiceSupported
+              ? isListening
+                ? 'Stop listening'
+                : 'Dictate message'
+              : 'Voice input not supported in this browser'
+          }
+        >
+          {isListening ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </Button>
+      </div>
+      <div className="min-h-[1.5rem] px-1">
+        {isListening && (
+          <p className="text-xs text-muted-foreground">Listening... speak naturally.</p>
+        )}
+        {voiceError && (
+          <p className="text-xs text-destructive">{voiceError}</p>
+        )}
       </div>
     </form>
   )

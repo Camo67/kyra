@@ -3,11 +3,15 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
+import { AUTH_DISABLED } from '@/lib/auth-config'
 
 interface CredentialPayload {
   geminiApiKey: string
   huggingfaceApiKey: string
   groqApiKey: string
+  openaiApiKey: string
+  anthropicApiKey: string
+  perplexityApiKey: string
   notionToken: string
 }
 
@@ -15,18 +19,22 @@ const defaultPayload: CredentialPayload = {
   geminiApiKey: '',
   huggingfaceApiKey: '',
   groqApiKey: '',
+  openaiApiKey: '',
+  anthropicApiKey: '',
+  perplexityApiKey: '',
   notionToken: '',
 }
 
 export default function CredentialsForm() {
   const { status } = useSession()
+  const isAuthenticated = AUTH_DISABLED || status === 'authenticated'
   const [formState, setFormState] = useState<CredentialPayload>(defaultPayload)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (status !== 'authenticated') return
+    if (!isAuthenticated) return
     const fetchCredentials = async () => {
       setIsLoading(true)
       try {
@@ -37,6 +45,9 @@ export default function CredentialsForm() {
           geminiApiKey: data.geminiApiKey || '',
           huggingfaceApiKey: data.huggingfaceApiKey || '',
           groqApiKey: data.groqApiKey || '',
+          openaiApiKey: data.openaiApiKey || '',
+          anthropicApiKey: data.anthropicApiKey || '',
+          perplexityApiKey: data.perplexityApiKey || '',
           notionToken: data.notionToken || '',
         })
       } catch (error) {
@@ -47,9 +58,9 @@ export default function CredentialsForm() {
       }
     }
     fetchCredentials()
-  }, [status])
+  }, [isAuthenticated])
 
-  if (status !== 'authenticated') {
+  if (!isAuthenticated) {
     return (
       <p className="text-sm text-muted-foreground">
         Sign in to connect your provider credentials.
@@ -88,6 +99,11 @@ export default function CredentialsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {AUTH_DISABLED && (
+        <p className="text-xs text-muted-foreground">
+          Authentication is disabled. Keys are stored in the shared demo profile.
+        </p>
+      )}
       {isLoading && (
         <p className="text-xs text-muted-foreground">
           Loading your saved keys...
@@ -129,6 +145,45 @@ export default function CredentialsForm() {
           value={formState.groqApiKey}
           onChange={(e) => handleChange('groqApiKey', e.target.value)}
           placeholder="gsk_..."
+          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-foreground" htmlFor="openai">
+          OpenAI API key
+        </label>
+        <input
+          id="openai"
+          type="password"
+          value={formState.openaiApiKey}
+          onChange={(e) => handleChange('openaiApiKey', e.target.value)}
+          placeholder="sk-..."
+          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-foreground" htmlFor="anthropic">
+          Anthropic API key
+        </label>
+        <input
+          id="anthropic"
+          type="password"
+          value={formState.anthropicApiKey}
+          onChange={(e) => handleChange('anthropicApiKey', e.target.value)}
+          placeholder="sk-ant-..."
+          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-foreground" htmlFor="perplexity">
+          Perplexity API key
+        </label>
+        <input
+          id="perplexity"
+          type="password"
+          value={formState.perplexityApiKey}
+          onChange={(e) => handleChange('perplexityApiKey', e.target.value)}
+          placeholder="pplx-..."
           className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>

@@ -1,9 +1,9 @@
 'use client'
 
-import { X, Moon, Sun, Plus, Trash2 } from 'lucide-react'
+import { X, Moon, Sun, Plus, Trash2, Image as ImageIcon, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFAULT_OLLAMA_ENDPOINT } from '@/lib/ollama'
 import { useTheme } from 'next-themes'
 import CredentialsForm from '@/components/credentials-form'
@@ -24,6 +24,7 @@ export default function SettingsDrawer({
   isOpen,
   onClose,
 }: SettingsDrawerProps) {
+  const DEFAULT_BACKGROUND_IMAGE = '/generated-image.png'
   const { theme, resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [localEndpoint, setLocalEndpoint] = useState(DEFAULT_OLLAMA_ENDPOINT)
@@ -32,22 +33,61 @@ export default function SettingsDrawer({
   const [newAppName, setNewAppName] = useState('')
   const [newAppEndpoint, setNewAppEndpoint] = useState('')
   const [newAppDescription, setNewAppDescription] = useState('')
+  const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BACKGROUND_IMAGE)
+  const [backgroundInput, setBackgroundInput] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  const currentTheme = theme === 'system' ? resolvedTheme : theme
+  const isDark = mounted ? currentTheme === 'dark' : false
+  const formatBackgroundValue = useCallback((value: string) => {
+    const trimmed = value?.trim()
+    if (!trimmed) {
+      return `url("${DEFAULT_BACKGROUND_IMAGE}")`
+    }
+    if (trimmed.startsWith('url(')) {
+      return trimmed
+    }
+    return `url("${trimmed}")`
+  }, [DEFAULT_BACKGROUND_IMAGE])
+
+  const updateDocumentBackground = useCallback((value: string) => {
+    if (typeof document === 'undefined') return
+    document.documentElement.style.setProperty(
+      '--app-background-image',
+      formatBackgroundValue(value),
+    )
+  }, [formatBackgroundValue])
+
+  const updateBackgroundImage = useCallback((value: string) => {
+    const normalized = value?.trim() || DEFAULT_BACKGROUND_IMAGE
+    setBackgroundImage(normalized)
+    if (typeof window !== 'undefined') {
+      if (normalized === DEFAULT_BACKGROUND_IMAGE) {
+        localStorage.removeItem('backgroundImage')
+      } else {
+        localStorage.setItem('backgroundImage', normalized)
+      }
+    }
+    updateDocumentBackground(normalized)
+  }, [DEFAULT_BACKGROUND_IMAGE, updateDocumentBackground])
+
   useEffect(() => {
     const savedEndpoint = localStorage.getItem('localEndpoint')
     const savedTemp = localStorage.getItem('temperature')
     const savedApps = localStorage.getItem('localApps')
+    const savedBackground = localStorage.getItem('backgroundImage')
     if (savedEndpoint) setLocalEndpoint(savedEndpoint)
     if (savedTemp) setTemperature(parseFloat(savedTemp))
     if (savedApps) setLocalApps(JSON.parse(savedApps))
-  }, [])
-
-  const currentTheme = theme === 'system' ? resolvedTheme : theme
-  const isDark = mounted ? currentTheme === 'dark' : false
+    const initialBackground = savedBackground || DEFAULT_BACKGROUND_IMAGE
+    setBackgroundImage(initialBackground)
+    if (savedBackground) setBackgroundInput(savedBackground)
+    updateDocumentBackground(initialBackground)
+  }, [DEFAULT_BACKGROUND_IMAGE, updateDocumentBackground])
 
   const handleThemeToggle = () => {
     setTheme(isDark ? 'light' : 'dark')
@@ -64,6 +104,35 @@ export default function SettingsDrawer({
     const newTemp = parseFloat(e.target.value)
     setTemperature(newTemp)
     localStorage.setItem('temperature', newTemp.toString())
+  }
+
+  const handleBackgroundInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBackgroundInput(e.target.value)
+  }
+
+  const handleApplyBackground = () => {
+    updateBackgroundImage(backgroundInput || DEFAULT_BACKGROUND_IMAGE)
+  }
+
+  const handleResetBackground = () => {
+    setBackgroundInput('')
+    updateBackgroundImage(DEFAULT_BACKGROUND_IMAGE)
+  }
+
+  const handleBackgroundUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setBackgroundInput('')
+        updateBackgroundImage(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+    if (event.target) {
+      event.target.value = ''
+    }
   }
 
   const addLocalApp = () => {
@@ -83,6 +152,10 @@ export default function SettingsDrawer({
     setNewAppName('')
     setNewAppEndpoint('')
     setNewAppDescription('')
+  }
+
+  const backgroundPreviewStyle = {
+    backgroundImage: formatBackgroundValue(backgroundImage),
   }
 
   const removeLocalApp = (id: string) => {
@@ -148,6 +221,85 @@ export default function SettingsDrawer({
                   Toggle
                 </Button>
               </div>
+            </Card>
+
+            {/* Background Picker */}
+            <Card className="p-4 bg-card/50 border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ImageIcon className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">Workspace backdrop</p>
+                    <p className="text-sm text-muted-foreground">
+                      Use any image or URL to personalize the canvas.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetBackground}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </Button>
+              </div>
+              <div
+                className="h-24 rounded-lg border border-border/80 bg-cover bg-center overflow-hidden"
+                style={backgroundPreviewStyle}
+              >
+                <div className="w-full h-full bg-black/40 flex items-center justify-center text-[11px] tracking-widest uppercase text-primary-foreground">
+                  Preview
+                </div>
+              </div>
+              <input
+                type="text"
+                value={backgroundInput}
+                onChange={handleBackgroundInputChange}
+                placeholder="https://example.com/wallpaper.png"
+                className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleApplyBackground}
+                  className="border-border text-foreground hover:bg-primary/10"
+                >
+                  Apply URL
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-border text-foreground hover:bg-primary/10"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Upload
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => updateBackgroundImage(DEFAULT_BACKGROUND_IMAGE)}
+                  className="text-muted-foreground hover:text-foreground hover:bg-primary/5"
+                >
+                  <RefreshCcw className="w-4 h-4 mr-1" />
+                  Default
+                </Button>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleBackgroundUpload}
+                className="hidden"
+              />
+              <p className="text-xs text-muted-foreground">
+                Uploaded images never leave your device; the data URI is stored in localStorage.
+              </p>
             </Card>
 
             <Card className="p-4 bg-card/50 border-border">

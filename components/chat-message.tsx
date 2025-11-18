@@ -1,5 +1,17 @@
+'use client'
+
 import { Card } from '@/components/ui/card'
-import { MessageCircle, FileText, ImageIcon, Download, Terminal } from 'lucide-react'
+import {
+  MessageCircle,
+  FileText,
+  ImageIcon,
+  Download,
+  Terminal,
+  Volume2,
+  Square,
+  AlertTriangle,
+} from 'lucide-react'
+import { useTextToSpeech } from '@/hooks/use-speech'
 
 interface FileAttachment {
   name: string
@@ -25,6 +37,17 @@ export default function ChatMessage({
 }: ChatMessageProps) {
   const isUser = role === 'user'
   const isTerminal = mode === 'terminal'
+  const shouldAnnounce = !isUser && !isTerminal
+  const {
+    isSupported: ttsSupported,
+    speak,
+    stop,
+    isSpeaking,
+    error: ttsError,
+    voices,
+    voiceName,
+    setVoice,
+  } = useTextToSpeech()
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
@@ -77,7 +100,47 @@ export default function ChatMessage({
           isUser ? userCardClasses : baseCardClasses
         } ${isLoading ? 'animate-pulse' : ''}`}
       >
-        <p className={`${textClasses} mb-2`}>{message}</p>
+        <div className="flex items-start gap-3 mb-2">
+          <p className={`${textClasses} whitespace-pre-wrap break-words flex-1`}>{message}</p>
+          {shouldAnnounce && (
+            <div className="flex flex-col gap-1 items-end">
+              {ttsSupported ? (
+                <div className="flex items-center gap-2">
+                  {voices.length > 1 && (
+                    <select
+                      aria-label="Select voice"
+                      value={voiceName || ''}
+                      onChange={(event) => setVoice(event.target.value)}
+                      className="text-xs rounded border border-border bg-background px-2 py-1"
+                    >
+                      {voices.map((voice) => (
+                        <option key={voice.name} value={voice.name}>
+                          {voice.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => (isSpeaking ? stop() : speak(message))}
+                    className={`rounded-full border border-border p-1.5 text-muted-foreground hover:text-foreground hover:border-foreground transition ${
+                      isSpeaking ? 'text-primary border-primary' : ''
+                    }`}
+                    aria-pressed={isSpeaking}
+                    title={isSpeaking ? 'Stop playback' : 'Listen to response'}
+                  >
+                    {isSpeaking ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+                </div>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <AlertTriangle className="w-4 h-4" />
+                  TTS unsupported in this browser.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {files && files.length > 0 && (
           <div className="flex flex-col gap-2 mt-3 border-t border-current/20 pt-3">
@@ -112,6 +175,13 @@ export default function ChatMessage({
           </div>
         )}
       </Card>
+
+      {ttsError && shouldAnnounce && (
+        <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3" />
+          {ttsError}
+        </p>
+      )}
 
       {isUser && (
         <div

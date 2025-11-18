@@ -84,12 +84,22 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --app-background-image: url('/generated-image.png');
 }
 
 body {
   @apply bg-background text-foreground;
   font-family: 'Geist', 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
+  background-image: radial-gradient(circle at top, color-mix(in oklch, var(--background), transparent 30%) 0%, var(--background) 55%), var(--app-background-image, url('/generated-image.png'));
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.app-surface {
+  background-color: color-mix(in oklch, var(--background) 85%, transparent);
+  backdrop-filter: blur(18px);
 }
 
 .bg-background {

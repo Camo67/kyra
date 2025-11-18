@@ -61,6 +61,9 @@ model UserCredential {
   geminiApiKey      String?
   huggingfaceApiKey String?
   groqApiKey        String?
+  openaiApiKey      String?
+  anthropicApiKey   String?
+  perplexityApiKey  String?
   notionToken       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

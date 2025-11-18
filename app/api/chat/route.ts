@@ -1,11 +1,15 @@
 import { connectToApp, parseAppCommand } from '@/lib/app-connector'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
+import { getActiveUser } from '@/lib/server-auth'
 
 type RemoteModelConfig = {
-  provider: 'gemini' | 'huggingface' | 'groq'
+  provider:
+    | 'gemini'
+    | 'huggingface'
+    | 'groq'
+    | 'openai'
+    | 'anthropic'
+    | 'perplexity'
   credentialField: keyof DecryptedCreds
   envVar: string
   modelId?: string
@@ -29,12 +33,33 @@ const remoteModels: Record<string, RemoteModelConfig> = {
     envVar: 'GROQ_API_KEY',
     modelId: 'llama3-8b-8192',
   },
+  'openai-gpt-4o-mini': {
+    provider: 'openai',
+    credentialField: 'openaiApiKey',
+    envVar: 'OPENAI_API_KEY',
+    modelId: 'gpt-4o-mini-1',
+  },
+  'anthropic-claude-35-sonnet': {
+    provider: 'anthropic',
+    credentialField: 'anthropicApiKey',
+    envVar: 'ANTHROPIC_API_KEY',
+    modelId: 'claude-3-5-sonnet-20241022',
+  },
+  'perplexity-sonar': {
+    provider: 'perplexity',
+    credentialField: 'perplexityApiKey',
+    envVar: 'PERPLEXITY_API_KEY',
+    modelId: 'sonar',
+  },
 }
 
 type DecryptedCreds = {
   geminiApiKey?: string | null
   huggingfaceApiKey?: string | null
   groqApiKey?: string | null
+  openaiApiKey?: string | null
+  anthropicApiKey?: string | null
+  perplexityApiKey?: string | null
 }
 
 type ConversationMessage = {
@@ -136,26 +161,98 @@ async function callGroq(
   return text || 'Groq returned an empty response.'
 }
 
+async function callOpenAI(
+  apiKey: string,
+  modelId: string,
+  messages: { role: 'user' | 'assistant'; content: string }[],
+) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenAI error: ${await response.text()}`)
+  }
+  const data = await response.json()
+  const text = data.choices?.[0]?.message?.content ?? ''
+  return text || 'OpenAI returned an empty response.'
+}
+
+async function callAnthropic(apiKey: string, modelId: string, prompt: string) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }],
+        },
+      ],
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Anthropic error: ${await response.text()}`)
+  }
+  const data = await response.json()
+  const text = data.content?.[0]?.text ?? ''
+  return text || 'Anthropic returned an empty response.'
+}
+
+async function callPerplexity(
+  apiKey: string,
+  modelId: string,
+  messages: { role: 'user' | 'assistant'; content: string }[],
+) {
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Perplexity error: ${await response.text()}`)
+  }
+  const data = await response.json()
+  const text = data.choices?.[0]?.message?.content ?? ''
+  return text || 'Perplexity returned an empty response.'
+}
+
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { credentials: true },
-    })
-
+    const user = await getActiveUser(true)
     if (!user) {
-      return Response.json({ error: 'User profile missing' }, { status: 404 })
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const decryptedCreds: DecryptedCreds = {
       geminiApiKey: decrypt(user.credentials?.geminiApiKey),
       huggingfaceApiKey: decrypt(user.credentials?.huggingfaceApiKey),
       groqApiKey: decrypt(user.credentials?.groqApiKey),
+      openaiApiKey: decrypt(user.credentials?.openaiApiKey),
+      anthropicApiKey: decrypt(user.credentials?.anthropicApiKey),
+      perplexityApiKey: decrypt(user.credentials?.perplexityApiKey),
     }
 
     const {
@@ -221,6 +318,14 @@ export async function POST(request: Request) {
       } else if (remoteConfig.provider === 'groq' && remoteConfig.modelId) {
         const chatMessages = buildChatHistory(normalizedHistory, message)
         text = await callGroq(apiKey, remoteConfig.modelId, chatMessages)
+      } else if (remoteConfig.provider === 'openai' && remoteConfig.modelId) {
+        const chatMessages = buildChatHistory(normalizedHistory, message)
+        text = await callOpenAI(apiKey, remoteConfig.modelId, chatMessages)
+      } else if (remoteConfig.provider === 'anthropic' && remoteConfig.modelId) {
+        text = await callAnthropic(apiKey, remoteConfig.modelId, prompt)
+      } else if (remoteConfig.provider === 'perplexity' && remoteConfig.modelId) {
+        const chatMessages = buildChatHistory(normalizedHistory, message)
+        text = await callPerplexity(apiKey, remoteConfig.modelId, chatMessages)
       }
 
       return Response.json({ response: text })

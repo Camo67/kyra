@@ -9,7 +9,7 @@ Prepared for iterative experimentation with TensorFlow, PyTorch, and scikit-lear
 - `models/`: checkpoints, exports, or serialized artifacts.
 - `utils/`: helper modules for data handling, metrics, etc.
 
-See `docs/environment.md` for environment setup details and `docs/packaging.md` for next steps toward PC packaging.
+See `docs/environment.md` for environment setup details, `docs/packaging.md` for next steps toward PC packaging, `docs/flutter-build.md` for a quick Flutter APK build cheatsheet, and `docs/android-apk.md` for shipping this Capacitor shell as an Android APK.
 
 ## Python + Termux workflow for Play Store readiness
 1. **Termux environment prep**
@@ -322,3 +322,13 @@ Add Grok to the same key manager pattern so agents can hit Grok chat endpoints:
    - `groq-llama3-8b` → Groq’s OpenAI-compatible endpoint.
    - Any other model → local Ollama endpoint (`localEndpoint` setting).
    The per-user credentials are injected automatically, so multi-user sessions never share secrets.
+
+## Upcoming enhancements
+1. **Automatic Google credential provisioning**
+   - Extend the Google OAuth flow with additional scopes (e.g., `https://www.googleapis.com/auth/cloud-platform`) and a follow-up consent button so Kira can create Gemini/NotebookLM keys on behalf of a user directly from Google APIs instead of requiring manual pasting.
+2. **Team workspaces**
+   - Introduce workspace entities (organization → workspace → members) that can hold shared credential bundles alongside per-user overrides; members inherit workspace keys unless they supply their own.
+3. **Audit logs & key usage tracking**
+   - Log every agent invocation (user, provider, timestamp, model, source IP) to a dedicated `KeyUsage` table or external logging service so admins can trace activity and detect abuse.
+4. **Production deployment (Cloud Run or Heroku)**
+   - Containerize the Next.js + Prisma app, provision a managed SQLite/MySQL/Postgres backend, and add deployment scripts. For Cloud Run the flow is: `gcloud builds submit`, `gcloud run deploy --set-env-vars ...`. For Heroku: create an app, add a Postgres add-on, then push via `git push heroku master` or GitHub Actions.

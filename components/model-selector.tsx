@@ -2,14 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DEFAULT_OLLAMA_ENDPOINT } from '@/lib/ollama'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { ChevronDown } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 
 interface ModelSelectorProps {
   selectedModel: string
@@ -37,6 +31,24 @@ const defaultModels: ModelOption[] = [
     badge: 'Groq',
     isLocal: false,
   },
+  {
+    id: 'openai-gpt-4o-mini',
+    name: 'GPT-4o mini',
+    badge: 'OpenAI',
+    isLocal: false,
+  },
+  {
+    id: 'anthropic-claude-35-sonnet',
+    name: 'Claude 3.5 Sonnet',
+    badge: 'Anthropic',
+    isLocal: false,
+  },
+  {
+    id: 'perplexity-sonar',
+    name: 'Perplexity Sonar',
+    badge: 'Perplexity',
+    isLocal: false,
+  },
 ]
 
 export default function ModelSelector({
@@ -46,8 +58,6 @@ export default function ModelSelector({
   const [localModels, setLocalModels] = useState<ModelOption[]>([])
   const [isLoadingLocal, setIsLoadingLocal] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
-  const [searchInput, setSearchInput] = useState('')
-  const [searchFilter, setSearchFilter] = useState('')
   const [controlState, setControlState] = useState<{
     model: string
     action: 'start' | 'stop'
@@ -58,7 +68,7 @@ export default function ModelSelector({
     text: string
   } | null>(null)
 
-  const fetchLocalModels = useCallback(async (query?: string) => {
+  const fetchLocalModels = useCallback(async () => {
     setIsLoadingLocal(true)
     setLocalError(null)
     try {
@@ -71,7 +81,6 @@ export default function ModelSelector({
         },
         body: JSON.stringify({
           endpoint: storedEndpoint,
-          query: query?.trim() || undefined,
         }),
       })
 
@@ -102,39 +111,32 @@ export default function ModelSelector({
   }, [])
 
   useEffect(() => {
-    fetchLocalModels(searchFilter)
-    const handleEndpointChange = () => fetchLocalModels(searchFilter)
+    fetchLocalModels()
+    const handleEndpointChange = () => fetchLocalModels()
     window.addEventListener('local-endpoint-changed', handleEndpointChange)
     return () => {
       window.removeEventListener('local-endpoint-changed', handleEndpointChange)
     }
-  }, [fetchLocalModels, searchFilter])
+  }, [fetchLocalModels])
 
   const availableModels = useMemo(
-    () => [...defaultModels, ...localModels],
-    [localModels],
+    () => {
+      const merged = [...defaultModels, ...localModels]
+      if (selectedModel && !merged.some((model) => model.id === selectedModel)) {
+        if (selectedModel !== '') {
+          merged.push({
+            id: selectedModel,
+            name: selectedModel,
+          })
+        }
+      }
+      return merged
+    },
+    [localModels, selectedModel],
   )
-  const filteredModels = useMemo(() => {
-    if (!searchFilter.trim()) return availableModels
-    return availableModels.filter((model) =>
-      model.name.toLowerCase().includes(searchFilter.toLowerCase())
-    )
-  }, [availableModels, searchFilter])
 
   const currentModel =
     availableModels.find((m) => m.id === selectedModel) || null
-
-  const handleSearchSubmit = (event?: React.FormEvent) => {
-    event?.preventDefault()
-    setSearchFilter(searchInput.trim())
-    fetchLocalModels(searchInput.trim())
-  }
-
-  const handleClearSearch = () => {
-    setSearchInput('')
-    setSearchFilter('')
-    fetchLocalModels()
-  }
 
   const handleControlModel = async (
     modelId: string,
@@ -195,170 +197,116 @@ export default function ModelSelector({
   const isModelBusy = (modelId: string, action: 'start' | 'stop') =>
     controlState?.model === modelId && controlState?.action === action
 
-  const handleModelSelect = (model: ModelOption) => {
-    if (model.isLocal) {
-      if (activeModel === model.id) {
+  const handleModelSelect = (modelId: string) => {
+    const selected = availableModels.find((model) => model.id === modelId)
+    if (selected?.isLocal) {
+      if (activeModel === modelId) {
         setControlFeedback({
           type: 'info',
-          text: `${model.id} is already active. Use Kill switch to stop it.`,
+          text: `${modelId} is already active. Use Stop to terminate it.`,
         })
-      } else {
-        handleControlModel(model.id, 'start')
+        return
       }
+      handleControlModel(modelId, 'start')
       return
     }
-
-    onModelChange(model.id)
     setControlFeedback(null)
+    onModelChange(modelId)
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="gap-2 border-border text-foreground hover:bg-card/80"
-        >
-          <span className="text-sm">
-            {currentModel?.name || selectedModel || 'Select model'}
+    <div className="w-full min-w-[220px] space-y-2 sm:w-auto">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            Model
           </span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 bg-card border-border space-y-1">
-        <div className="p-3 border-b border-border/60 space-y-2">
-          <form className="flex gap-2" onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              placeholder="Search models..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="flex-1 rounded border border-border bg-input px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <Button type="submit" size="sm">
-              Search
-            </Button>
-          </form>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchLocalModels(searchFilter)}
-            >
-              Refresh
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleClearSearch}
-              disabled={!searchFilter && !searchInput}
-            >
-              Clear
-            </Button>
-          </div>
+          <span className="text-sm font-medium text-foreground">
+            {currentModel?.name || 'Select a model'}
+          </span>
         </div>
-        {activeModel && (
-          <div className="px-3">
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              disabled={isModelBusy(activeModel, 'stop')}
-              onClick={() => handleControlModel(activeModel, 'stop')}
-            >
-              {isModelBusy(activeModel, 'stop')
-                ? `Stopping ${activeModel}...`
-                : `Kill ${activeModel}`}
-            </Button>
-          </div>
-        )}
-        {controlFeedback && (
-          <div
-            className={`px-3 py-2 text-xs ${
-              controlFeedback.type === 'error'
-                ? 'text-destructive'
-                : 'text-muted-foreground'
-            }`}
-          >
-            {controlFeedback.text}
-          </div>
-        )}
-        {isLoadingLocal && (
-          <div className="px-3 py-2 text-xs text-muted-foreground">
-            Scanning for local models...
-          </div>
-        )}
-        {filteredModels.map((model) => {
-          const isLocal = model.isLocal ?? model.badge === 'Local'
-          const isActive = activeModel === model.id
-          return (
-            <DropdownMenuItem
-              key={model.id}
-              onClick={(event) => {
-                event.preventDefault()
-                handleModelSelect(model)
-              }}
-              className={`flex flex-col gap-2 cursor-pointer ${
-                isActive ? 'bg-primary/5' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-foreground text-sm">{model.name}</span>
-                {model.badge && (
-                  <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
-                    {model.badge}
-                    {isActive && ' • active'}
-                  </span>
-                )}
-              </div>
-              {isLocal && (
-                <div className="flex gap-2 w-full">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isModelBusy(model.id, 'start')}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleControlModel(model.id, 'start')
-                    }}
-                  >
-                    {isModelBusy(model.id, 'start') ? 'Starting...' : 'Start'}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="flex-1"
-                    disabled={isModelBusy(model.id, 'stop')}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleControlModel(model.id, 'stop')
-                    }}
-                  >
-                    {isModelBusy(model.id, 'stop') ? 'Stopping...' : 'Stop'}
-                  </Button>
-                </div>
-              )}
-            </DropdownMenuItem>
-          )
-        })}
-        {!isLoadingLocal && localError && (
-          <div className="px-3 py-2 text-xs text-destructive">{localError}</div>
-        )}
-        {!isLoadingLocal &&
-          !localError &&
-          !searchFilter.trim() &&
-          localModels.length === 0 && (
-          <div className="px-3 py-2 text-xs text-muted-foreground">
-            No local models detected. Make sure Ollama is running.
-          </div>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          onClick={fetchLocalModels}
+          disabled={isLoadingLocal}
+        >
+          <RefreshCw className={`w-3 h-3 ${isLoadingLocal ? 'animate-spin' : ''}`} />
+          <span className="text-xs hidden sm:inline">Refresh</span>
+        </Button>
+      </div>
+
+      <select
+        value={selectedModel}
+        onChange={(event) => handleModelSelect(event.target.value)}
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value="" disabled>
+          Choose a model
+        </option>
+        <optgroup label="Cloud providers">
+          {defaultModels.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Local (Ollama)">
+          {localModels.length === 0 && (
+            <option value="__none" disabled>
+              {isLoadingLocal ? 'Scanning for models...' : 'No local models found'}
+            </option>
+          )}
+          {localModels.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+              {activeModel === model.id ? ' • active' : ''}
+            </option>
+          ))}
+        </optgroup>
+        {selectedModel &&
+          !defaultModels.some((model) => model.id === selectedModel) &&
+          !localModels.some((model) => model.id === selectedModel) && (
+            <optgroup label="Custom">
+              <option value={selectedModel}>{selectedModel}</option>
+            </optgroup>
+          )}
+      </select>
+
+      {controlFeedback && (
+        <p
+          className={`text-xs ${
+            controlFeedback.type === 'error'
+              ? 'text-destructive'
+              : 'text-muted-foreground'
+          }`}
+        >
+          {controlFeedback.text}
+        </p>
+      )}
+
+      {localError && (
+        <p className="text-xs text-destructive">
+          {localError}
+        </p>
+      )}
+
+      {activeModel && (
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          className="w-full"
+          onClick={() => handleControlModel(activeModel, 'stop')}
+          disabled={isModelBusy(activeModel, 'stop')}
+        >
+          {isModelBusy(activeModel, 'stop')
+            ? `Stopping ${activeModel}...`
+            : `Stop ${activeModel}`}
+        </Button>
+      )}
+    </div>
   )
 }

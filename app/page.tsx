@@ -10,6 +10,7 @@ import ModelSelector from '@/components/model-selector'
 import SettingsDrawer from '@/components/settings-drawer'
 import TermuxGuide from '@/components/termux-guide'
 import { useSession, signIn, signOut } from 'next-auth/react'
+import { AUTH_DISABLED, FALLBACK_USER_EMAIL } from '@/lib/auth-config'
 
 const terminalQuickActions = [
   { label: 'Show directory', command: 'pwd' },
@@ -45,6 +46,11 @@ export default function Home() {
   const [interactionMode, setInteractionMode] = useState<'ai' | 'terminal'>('ai')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { data: session, status } = useSession()
+  const isLoadingSession = !AUTH_DISABLED && status === 'loading'
+  const isAuthenticated = AUTH_DISABLED || !!session
+  const displayEmail = AUTH_DISABLED
+    ? FALLBACK_USER_EMAIL
+    : session?.user?.email ?? 'Unknown user'
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -231,7 +237,7 @@ export default function Home() {
     setMessages([])
   }
 
-  if (status === 'loading') {
+  if (isLoadingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
         Connecting to your workspace...
@@ -239,7 +245,7 @@ export default function Home() {
     )
   }
 
-  if (!session) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-md w-full border border-border rounded-2xl bg-card p-8 text-center space-y-4 shadow-sm">
@@ -259,7 +265,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen app-surface">
       {/* Sidebar */}
       <div className="w-64 border-r border-border bg-card p-4 flex flex-col">
         <div className="flex items-center gap-2 mb-8">
@@ -333,16 +339,18 @@ export default function Home() {
             )}
             <TermuxGuide />
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-muted-foreground">
-              <span>{session.user?.email}</span>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Sign out"
-                onClick={() => signOut({ callbackUrl: '/' })}
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <span>{displayEmail}</span>
+              {!AUTH_DISABLED && (
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Sign out"
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
